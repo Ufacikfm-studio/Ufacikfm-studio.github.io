@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Yönetim Paneli - BenMasum</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <style>
+        body { background: #111; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; margin: 0; }
+        h1 { color: #00f2ff; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .section { background: #222; padding: 20px; border-radius: 10px; margin-bottom: 30px; border: 1px solid #444; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        h2 { color: #ffcc00; font-size: 18px; margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #444; padding: 12px; text-align: left; }
+        th { background: #333; color: #00f2ff; }
+        tr:hover { background: #2a2a2a; }
+        select { padding: 8px; background: #111; color: #fff; border: 1px solid #00f2ff; border-radius: 4px; outline: none; }
+        button { padding: 8px 15px; background: #333; color: #fff; border: 1px solid #00f2ff; cursor: pointer; border-radius: 4px; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #00f2ff; color: #000; }
+        .btn-danger { border-color: #ff4b2b; color: #ff4b2b; background: transparent; }
+        .btn-danger:hover { background: #ff4b2b; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <h1>⚙️ YÖNETİM PANELİ</h1>
+    <p style="color: #aaa;">Sisteme bağlı olan tüm kullanıcıların rütbelerini ve yasaklıları buradan yönetebilirsiniz.</p>
+
+    <div class="section">
+        <h2>👥 Kullanıcı Yönetimi (Yetki Verme)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nick</th>
+                    <th>Mevcut Rütbe</th>
+                    <th>Yeni Rütbe Seç</th>
+                </tr>
+            </thead>
+            <tbody id="users-table">
+                <tr><td colspan="3" style="text-align: center; color: #888;">Kullanıcılar yükleniyor...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>🚫 Yasaklı Listesi (Banlananlar)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nick / IP</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody id="bans-table">
+                <tr><td colspan="2" style="text-align: center; color: #888;">Liste yükleniyor...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+  apiKey: "AIzaSyAnaJWXWAeImldFtzvLv44NmY8U0J5p-PM",
+  authDomain: "ufacikfm-e5bfc.firebaseapp.com",
+  projectId: "ufacikfm-e5bfc",
+  storageBucket: "ufacikfm-e5bfc.firebasestorage.app",
+  mesajlaşmaSenderId: "340949706831",
+  appId: "1:340949706831:web:8a74ba49d716b6f0d9a23a",
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        db.ref('users').on('value', snap => {
+            const tbody = document.getElementById('users-table');
+            tbody.innerHTML = '';
+            if(!snap.exists()) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Henüz kayıtlı kullanıcı yok.</td></tr>';
+                return;
+            }
+            
+            snap.forEach(child => {
+                const nick = child.key;
+                const data = child.val();
+                const role = data.role || 'Misafir';
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:bold; color:#fff;">${nick}</td>
+                    <td style="color:#00fc00;">${role}</td>
+                    <td>
+                        <select id="role-${nick}">
+                            <option value="Kurucu" ${role==='Kurucu'?'selected':''}>👑 Kurucu</option>
+                            <option value="Yönetici" ${role==='Yönetici'?'selected':''}>🛡️ Yönetici</option>
+                            <option value="Admin" ${role==='Admin'?'selected':''}>🛡️ Admin</option>
+                            <option value="Teknik Servis" ${role==='Teknik Servis'?'selected':''}>🔧 Teknik Servis</option>
+                            <option value="Dj" ${role==='Dj'?'selected':''}>🎧 Dj</option>
+                            <option value="Üye" ${role==='Üye'?'selected':''}>👤 Üye</option>
+                            <option value="Misafir" ${role==='Misafir'?'selected':''}>👻 Misafir</option>
+                        </select>
+                        <button style="margin-left:10px;" onclick="changeRole('${nick}')">Kaydet</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+
+        function changeRole(nick) {
+            const newRole = document.getElementById('role-' + nick).value.replace(/👑 |🛡️ |🔧 |🎧 |👤 |👻 /g, '');
+            if(confirm(nick + ' adlı kişinin rütbesi ' + newRole + ' olarak değiştirilecek. Onaylıyor musunuz?')) {
+                db.ref('users/' + nick).update({ role: newRole });
+                db.ref('presence/' + nick).update({ role: newRole });
+                alert('Rütbe başarıyla güncellendi!');
+            }
+        }
+
+        db.ref('banned_ips').on('value', snap => {
+            const tbody = document.getElementById('bans-table');
+            tbody.innerHTML = '';
+            if(!snap.exists()) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">Şu an yasaklı kimse yok.</td></tr>';
+                return;
+            }
+            snap.forEach(child => {
+                const key = child.key;
+                const data = child.val();
+                const info = data.nick ? data.nick : "Bilinmeyen IP: " + key;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:#ff4b2b; font-weight:bold;">${info}</td>
+                    <td><button class="btn-danger" onclick="unban('${key}')">Yasağı Kaldır</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+
+        function unban(key) {
+            if(confirm('Bu kişinin yasağını kaldırmak istediğinize emin misiniz?')) {
+                db.ref('banned_ips/' + key).remove();
+                alert('Yasak başarıyla kaldırıldı!');
+            }
+        }
+    </script>
+</body>
+</html>
