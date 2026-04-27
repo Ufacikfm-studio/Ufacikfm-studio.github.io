@@ -127,7 +127,7 @@
 </div>
 
 <script>
-    const firebaseConfig = { apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg", authDomain: "flat-chat-fa830.firebaseapp.com", databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app", projectId: "flat-chat-fa830" };
+    const firebaseConfig = { apiKey: "AIzaSyClTL4-K0_oEq6WvM-DVvSaStpyBiR0cA0", authDomain: "benmasum-2d59b.firebaseapp.com", databaseURL: "https://benmasum-2d59b-default-rtdb.europe-west1.firebasedatabase.app", projectId: "benmasum-2d59b" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const rootNick = "BenMasum";
