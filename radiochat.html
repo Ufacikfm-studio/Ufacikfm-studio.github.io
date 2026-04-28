@@ -45,9 +45,13 @@ div#container{
 
 </head>
 <body>
-  
 
-  
+<div id="container">
+  <img src="https://iili.io/qgsr6dv.jpg" width="1350" height="1700">
+  <!-- Diğer img ve overlay kodları aynı şekilde -->
+</div>
+
+ 
 <!-- 🎧 DJ & TEMA SİSTEMİ (Alt satırlı Boss meta ve Sheet default BG destekli) -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -143,124 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
     slideTimer = null;
   }
 
-  // --- 4. ANA KONTROL MEKANİZMASI ---
-  function checkCurrentDJ() {
-    const el = document.querySelector('.cc_streaminfo');
-    if (!el) return;
 
-    const currentMetadata = el.textContent.toUpperCase().trim();
-    let foundFullDJ = null;
-
-    for (const djCode in djBackgrounds) {
-      if (currentMetadata.includes(djCode)) {
-        foundFullDJ = djCode;
-        break;
-      }
-    }
-
-    if (foundFullDJ) {
-      const currentBaseName = foundFullDJ.replace(/[0-9]/g, '').trim();
-
-      // DURUM A: Aynı DJ, farklı tema (GUNGOR01 -> GUNGOR02)
-      if (lastDJBaseName === currentBaseName && lastFullDJ !== foundFullDJ) {
-        lastFullDJ = foundFullDJ;
-        updateBackground(djBackgrounds[foundFullDJ]);
-        return; 
-      }
-
-      // DURUM B: DJ Değişimi veya İlk Başlangıç
-      if (lastDJBaseName !== currentBaseName) {
-        // Eğer eski bir DJ varsa onun kaydını "finish" yaparak kapat
-        if (lastDJBaseName && lastDJBaseName !== "OTO") {
-          reportDJStatus(lastDJBaseName, "update", true);
-          clearInterval(statsTimer);
-        }
-
-        stopSlideshow();
-        lastDJBaseName = currentBaseName;
-        lastFullDJ = foundFullDJ;
-        updateBackground(djBackgrounds[foundFullDJ]);
-        
-        // Yeni DJ için başlat
-        reportDJStatus(currentBaseName, "start");
-
-        // Periyodik güncelleme başlat (10 dakikada bir)
-        statsTimer = setInterval(() => {
-          reportDJStatus(currentBaseName, "update", false);
-        }, statsUpdateInterval);
-      }
-    } else {
-      // OTO DJ MODU
-      if (lastDJBaseName !== "OTO") {
-        if (lastDJBaseName && lastDJBaseName !== "OTO") {
-          reportDJStatus(lastDJBaseName, "update", true);
-          clearInterval(statsTimer);
-        }
-        
-        lastDJBaseName = "OTO";
-        lastFullDJ = "";
-        startSlideshow();
-      }
-    }
-  }
-
-  // --- BAŞLATICI ---
-  const s = document.createElement('script');
-  s.src = 'https://eu4.fastcast4u.com/system/streaminfo.js';
-  s.onload = async () => {
-    await loadDJList();
-    checkCurrentDJ(); // İlk kontrol
-    setInterval(loadDJList, sheetUpdateInterval); 
-    setInterval(checkCurrentDJ, 5000); 
-  };
-  document.body.appendChild(s);
-
-});
-</script>
-
-
-<!-- 🎶 ŞU AN ÇALIYOR -->
-<div id="nowPlaying" style="position:absolute; left:580px; top:1493px; width:166px; height:30px; font-size:19px; font-weight:bold; color:#007bff; background:transparent; padding:5px; text-align:left; z-index:66; overflow:hidden; white-space:nowrap;">
-<marquee behavior="scroll" direction="left" scrollamount="4" style="color:#00800; text-decoration:none;">
-<a href="https://eu4.fastcast4u.com/tunein/ufacikfm.pls"
-class="cc_streaminfo"
-data-type="song"
-data-username="ufacikfm"
-style="color:#ffffff; text-decoration:none;">
-Yükleniyor...
-</a>
-</marquee>
-  
-  <script>
-// ===================================
-// "Şu An Çalıyor" görünmez yap
-// ===================================
-document.getElementById("nowPlaying").style.visibility = "hidden";
-document.getElementById("nowPlaying").style.opacity = 0;
-document.getElementById("nowPlaying").style.pointerEvents = "none";
-</script>
-  
-<script>
-function reloadStreamInfo() {
-  // eski scripti sil
-  const old = document.getElementById('streaminfo-js');
-  if (old) old.remove();
-
-  // yenisini ekle
-  const s = document.createElement('script');
-  s.src = 'https://eu4.fastcast4u.com/system/streaminfo.js?' + Date.now();
-  s.id = 'streaminfo-js';
-  document.body.appendChild(s);
-}
-
-// ilk yükleme
-reloadStreamInfo();
-
-// her 2 dakikada bir stream bilgisini tazele
-setInterval(reloadStreamInfo, 120000);
-</script>
-
-</div>
                   
   <script type="text/javascript">
 document.addEventListener('mousedown', function(e) {
@@ -287,6 +174,73 @@ document.addEventListener('contextmenu', function(e) {
 </script>
 
 
+<script>
+(function(){
+  const liste = document.getElementById('kayanListe');
+  const beklemeSuresi = 5000;
+  const kaymaSuresi   = 600;
+
+  function satirYuksekligi() {
+    const ilk = liste.children[0];
+    return ilk ? ilk.getBoundingClientRect().height : 0;
+  }
+
+  const toplam = liste.children.length;
+  if (toplam === 0) return;
+  liste.appendChild(liste.children[0].cloneNode(true));
+
+  let i = 0;
+  let h = satirYuksekligi();
+
+  window.addEventListener('resize', () => {
+    h = satirYuksekligi();
+    liste.style.transition = 'none';
+    liste.style.transform = `translateY(${-i * h}px)`;
+  });
+
+  function sonraki() {
+    i++;
+    liste.style.transition = `transform ${kaymaSuresi}ms ease`;
+    liste.style.transform = `translateY(${-i * h}px)`;
+
+    if (i === toplam) {
+      liste.addEventListener('transitionend', function geriSar() {
+        liste.removeEventListener('transitionend', geriSar);
+        liste.style.transition = 'none';
+        i = 0;
+        liste.style.transform = 'translateY(0)';
+      }, { once: true });
+    }
+  }
+  setInterval(sonraki, beklemeSuresi);
+})();
+</script>
+  
+
+<script language="Javascript1.2"> 
+<!--
+// please keep these lines on when you copy the source
+// made by: Nicolas - http://www.javascript-page.com
+ 
+var mymessage = "Buna Gerek Yok";
+ 
+function rtclickcheck(keyp){
+  if (navigator.appName == "Netscape" && keyp.which == 3) {
+    alert(mymessage);
+    return false;
+  }
+ 
+  if (navigator.appVersion.indexOf("MSIE") != -1 && event.button == 2) {
+    alert(mymessage);
+    return false;
+  }
+}
+ 
+document.onmousedown = rtclickcheck
+//-->
+
+</script> 
+  
 
   
 </body>
@@ -353,345 +307,3 @@ async function loadSonsuzEkip() {
 loadSonsuzEkip();
 setInterval(loadSonsuzEkip, 60000);
 </script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div id="iframe-container" style="
-position:absolute;
-left:75px;
-top:800px;
-width:1200px;
-height:700px;
-z-index:66;
-background-size:cover;
-background-position:center;
-">
-<iframe src="https://ufacikfm-studio.github.io/radiochat.html"
-width="1200" height="700"
-frameborder="0"
-scrolling="no"></iframe>
-</div>
-
-
-
-
-
-
-
-<div class="ext-equalizer" id="ext-left"></div>
-<div class="ext-equalizer" id="ext-right"></div>
-
-<div id="dj-status-card" style="
-    position: absolute; 
-    left: 850px; 
-    top: 400px; 
-    width: 420px; 
-    height: 165px; 
-    z-index: 1000; 
-    background: rgba(255, 255, 255, 0.07); 
-    backdrop-filter: blur(20px); 
-    -webkit-backdrop-filter: blur(20px); 
-    border: 1px solid rgba(255, 255, 255, 0.15); 
-    border-radius: 20px; 
-    display: flex; 
-    flex-direction: column;
-    padding: 15px 25px;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Roboto, sans-serif;
-    --dj-tema-rengi: #00ffcc;
-    overflow: hidden;
-    /* Neon Yanıp Sönme Animasyonu Burada Tanımlandı */
-    animation: neonGlow 3s ease-in-out infinite;
-    transition: border 0.5s ease;">
-
-    <canvas id="bgVisualizer" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 4.3; pointer-events: none;"></canvas>
-
-    <div style="position: absolute; top: 12px; right: 20px; display: flex; align-items: center; gap: 5px; z-index: 10;">
-        <span style="width: 6px; height: 6px; background: #00ffcc; border-radius: 50%; box-shadow: 0 0 5px #00ffcc;"></span>
-        <span id="users" style="color: #eee; font-size: 11px; font-weight: 700;">0</span>
-        <span style="color: rgba(255,255,255,0.5); font-size: 10px; font-weight: 400; text-transform: uppercase;">Dinleyici</span>
-    </div>
-
-    <div style="display: flex; align-items: center; z-index: 5; position: relative;">
-        <div style="position: relative; width: 85px; height: 85px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <img id="dj-card-img" src="https://i.imgur.com/UKUVBN3.jpeg" 
-                 style="width: 75px; height: 75px; border-radius: 50%; object-fit: cover; border: 2px solid var(--dj-tema-rengi); background: #000; padding: 2px;"
-                 onerror="this.src='https://iili.io/qvnCpee.jpg'">
-        </div>
-
-        <div style="margin-left: 20px; display: flex; flex-direction: column; justify-content: center; overflow: hidden; width: 100%;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">
-                <span id="dj-rutbe" style="background: var(--dj-tema-rengi); color: #000; font-size: 9px; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">YAYINDA</span>
-                <span style="width: 6px; height: 6px; background: #ff0000; border-radius: 50%; animation: djBlink 1s linear infinite;"></span>
-                <span style="color: #ff0000; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">Canlı Yayın</span>
-            </div>
-            
-            <div style="white-space: nowrap; display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                <span id="dj-prefix" style="color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 400;">Yayında :</span>
-                <span id="dj-card-name" style="font-size: 17px; font-weight: 900; color: var(--dj-tema-rengi);">Yükleniyor...</span>
-            </div>
-
-            <div style="white-space: nowrap; display: flex; align-items: center; gap: 6px; overflow: hidden;">
-                <span id="song-name" style="font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 500; text-overflow: ellipsis; overflow: hidden;">Bilgi alınıyor...</span>
-            </div>
-        </div>
-    </div>
-
-    <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px; z-index: 10; position: relative; padding: 5px 0;">
-        <button id="pBtn" style="background: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">▶</button>
-        <input type="range" id="vInp" min="0" max="1" step="0.05" value="0.8" style="flex: 1; accent-color: var(--dj-tema-rengi); cursor: pointer; height: 4px;">
-    </div>
-
-    <audio id="rAudio" crossorigin="anonymous">
-        <source src="http://eu4.fastcast4u.com/proxy/ufacikfm?mp=/1" type="audio/mpeg">
-    </audio>
-</div>
-
-<style>
-    /* Neon Yanıp Sönme Efekti */
-    @keyframes neonGlow {
-        0% { box-shadow: 0 0 10px var(--dj-tema-rengi), 0 0 20px rgba(0,0,0,0.2); }
-        50% { box-shadow: 0 0 35px var(--dj-tema-rengi), 0 0 15px var(--dj-tema-rengi); }
-        100% { box-shadow: 0 0 10px var(--dj-tema-rengi), 0 0 20px rgba(0,0,0,0.2); }
-    }
-
-    .ext-equalizer {
-        display: flex;
-        flex-direction: column-reverse; 
-        align-items: center;
-        justify-content: center;
-        height: 690px; 
-        width: 25px; 
-        position: absolute; 
-        z-index: 2000; 
-        gap: 1.5px;
-        pointer-events: none;
-    }
-
-    #ext-left  { left: 50px; top: 805px; } 
-    #ext-right { left: 1275px; top: 805px; } 
-
-    .ext-bar {
-        width: 8px;
-        height: 3.5px; 
-        background: #00ff00; 
-        transition: transform 0.1s ease; 
-        opacity: 0.15; 
-        border-radius: 1px;
-    }
-
-    .ext-bar:nth-child(n+70) { background: #ffff00; } 
-    .ext-bar:nth-child(n+115) { background: #ff0000; } 
-
-    .ext-bar.active {
-        opacity: 1 !important;
-        box-shadow: 0 0 8px rgba(255,255,255,0.4), 0 0 6px currentColor;
-        transform: scaleX(1.15);
-    }
-
-    @keyframes djBlink { 50% { opacity: 0.3; } }
-    input[type=range] { -webkit-appearance: none; background: rgba(255,255,255,0.15); border-radius: 10px; }
-</style>
-
-<script>
-/* Mevcut JS Kodun Aynen Kalıyor */
-(function djInfoSystem() {
-    const djImg = document.getElementById('dj-card-img');
-    const djName = document.getElementById('dj-card-name');
-    const djPrefix = document.getElementById('dj-prefix');
-    const djRutbe = document.getElementById('dj-rutbe');
-    const songName = document.getElementById('song-name');
-    const djCard = document.getElementById('dj-status-card');
-    const userCount = document.getElementById('users');
-
-    const sheetId = '14kFHv5QFi9ZL5EQetTMuVMuwJXochAncBih1ce2croA';
-    const sheetURL = `https://opensheet.elk.sh/${sheetId}/DJ_Bilgi`;
-
-    function normalizeText(text) {
-        return String(text || "").trim().toLowerCase()
-            .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g')
-            .replace(/ç/g, 'c').replace(/ö/g, 'o').replace(/ü/g, 'u');
-    }
-
-    async function updateDJStatus() {
-        try {
-            const response = await fetch(sheetURL);
-            const djData = await response.json();
-            const streamEl = document.querySelector('.cc_streaminfo');
-            if (!streamEl) return;
-            
-            const rawInfo = streamEl.textContent.trim();
-            const cleanRawInfo = normalizeText(rawInfo); 
-            let activeDJ = null;
-
-            djData.forEach(item => {
-                if (item.dj_adi) {
-                    const djNick = normalizeText(item.dj_adi);
-                    const regex = new RegExp(djNick + "[0-9]+", "i"); 
-                    if (regex.test(cleanRawInfo)) { activeDJ = item; }
-                }
-            });
-
-            if (activeDJ) {
-                djPrefix.innerText = "Yayında :";
-                djName.innerText = activeDJ.dj_adi;
-                const temaRengi = activeDJ.isim_rengi || '#00ffcc';
-                djCard.style.setProperty('--dj-tema-rengi', temaRengi);
-                djRutbe.innerText = activeDJ.rutbe_adi || "YAYINCI";
-                djRutbe.style.background = activeDJ.rutbe_rengi || temaRengi;
-                djImg.src = (activeDJ.foto_url && activeDJ.foto_url.trim().length > 10) ? activeDJ.foto_url.trim() : 'https://iili.io/qvnCpee.jpg';
-                djImg.style.borderColor = temaRengi;
-                let contentOnly = rawInfo.replace(/Unknown/gi, '').replace(/[a-zA-ZçöşğüıİÇÖŞĞÜ]+[0-9]+/g, '').replace(/^[\s-磨:]+/, '').trim();
-                songName.innerText = (contentOnly.length > 3) ? contentOnly : `${activeDJ.dj_adi} ile Müzik Keyfi...`;
-            } else {
-                djName.innerText = "Auto Yayın";
-                djPrefix.innerText = "Şuan Yayında :";
-                let autoSong = rawInfo.replace(/Unknown/gi, '').replace(/^[\s-磨:]+/, '').trim();
-                songName.innerText = autoSong || "Keyifli Dinlemeler...";
-                djCard.style.setProperty('--dj-tema-rengi', "#00ff00");
-                djImg.src = 'https://i.imgur.com/UKUVBN3.jpeg';
-                djImg.style.borderColor = "#00ff00";
-            }
-
-            const listenerRes = await fetch('https://chameleon.chattersnet.nl/api/usercount.php?channel=Ufacikfmm');
-            userCount.innerText = await listenerRes.text() || "0";
-        } catch (err) { console.error("Hata:", err); }
-    }
-    setInterval(updateDJStatus, 5000); updateDJStatus();
-})();
-
-(function audioEngine() {
-    const audio = document.getElementById('rAudio');
-    const pBtn = document.getElementById('pBtn');
-    const vInp = document.getElementById('vInp');
-    const djCard = document.getElementById('dj-status-card');
-
-    const chatOverlay = document.getElementById('chat-overlay');
-
-    if (chatOverlay) {
-        chatOverlay.addEventListener('mousedown', () => {
-            if (audio.paused) {
-                init();
-                audio.play().then(() => {
-                    pBtn.innerText = "⏸";
-                    chatOverlay.style.display = 'none'; 
-                }).catch(e => console.log("Play error"));
-            } else {
-                chatOverlay.style.display = 'none';
-            }
-        });
-    }
-
-    const canvas = document.getElementById('bgVisualizer');
-    const ctx = canvas.getContext('2d');
-    let aCtx, analyser, source, data;
-
-    function createExtBars() {
-        ['ext-left', 'ext-right'].forEach(id => {
-            const container = document.getElementById(id);
-            if (!container) return;
-            container.innerHTML = '';
-            for (let i = 0; i < 150; i++) {
-                let bar = document.createElement('div');
-                bar.className = 'ext-bar';
-                container.appendChild(bar);
-            }
-        });
-    }
-    createExtBars();
-
-    function init() {
-        if (aCtx) {
-            if (aCtx.state === 'suspended') aCtx.resume();
-            return;
-        }
-        try {
-            aCtx = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = aCtx.createAnalyser();
-            source = aCtx.createMediaElementSource(audio);
-            source.connect(analyser);
-            analyser.connect(aCtx.destination);
-            analyser.fftSize = 64;
-            data = new Uint8Array(analyser.frequencyBinCount);
-            canvas.width = 420; canvas.height = 165;
-            render();
-        } catch(e) { console.log("Audio Init Error"); }
-    }
-
-    window.addEventListener('mousedown', (e) => {
-        const yasakliEtiketler = ['INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'A'];
-        if (!yasakliEtiketler.includes(e.target.tagName) && audio.paused) {
-            init();
-            audio.play().then(() => pBtn.innerText = "⏸").catch(e => console.log("Play error"));
-        }
-    }, true);
-
-    pBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); 
-        init();
-        if (audio.paused) {
-            audio.play().then(() => pBtn.innerText = "⏸").catch(e => console.log("Play error"));
-        } else {
-            audio.pause();
-            pBtn.innerText = "▶";
-        }
-    });
-    
-    vInp.addEventListener('input', (e) => audio.volume = e.target.value);
-
-    function render() {
-        requestAnimationFrame(render);
-        if(!analyser) return;
-        analyser.getByteFrequencyData(data);
-        
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const djTemaRengi = getComputedStyle(djCard).getPropertyValue('--dj-tema-rengi').trim();
-        
-        let x = 0;
-        for (let i = 0; i < data.length; i++) {
-            let h = (data[i] / 255) * canvas.height;
-            ctx.fillStyle = djTemaRengi + "33"; 
-            ctx.fillRect(x, canvas.height - h, 15, h);
-            x += 18;
-        }
-
-        if(audio.paused) {
-             document.querySelectorAll('.ext-bar').forEach(b => b.classList.remove('active'));
-             return;
-        }
-
-        const sum = data.reduce((a, b) => a + b, 0);
-        const avg = sum / data.length;
-        const currentLevel = Math.floor((avg / 140) * 150); 
-
-        const allEqualizers = document.querySelectorAll('.ext-equalizer');
-        allEqualizers.forEach(eq => {
-            const bars = eq.getElementsByClassName('ext-bar');
-            for (let i = 0; i < bars.length; i++) {
-                if (i < currentLevel) {
-                    bars[i].classList.add('active');
-                } else {
-                    bars[i].classList.remove('active');
-                }
-            }
-        });
-    }
-})();
-</script>
-
-
-
-
-
-
