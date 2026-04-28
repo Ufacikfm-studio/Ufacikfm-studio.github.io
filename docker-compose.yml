@@ -1,0 +1,61 @@
+services:
+  apache:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: radiochatbox_apache
+    restart: on-failure
+    ports:
+      - "98:80"
+    volumes:
+      - ./:/var/www/html
+      - ./apache/site.conf:/etc/apache2/sites-available/000-default.conf
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=radiochatbox
+      - DB_USER=radiochatbox
+      - DB_PASSWORD=radiochatbox_secret
+      - TZ=Europe/Athens
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - radiochatbox
+
+  redis:
+    image: redis:7-alpine
+    container_name: radiochatbox_redis
+    restart: on-failure
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - radiochatbox
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: radiochatbox_postgres
+    restart: on-failure
+    environment:
+      - POSTGRES_DB=radiochatbox
+      - POSTGRES_USER=radiochatbox
+      - POSTGRES_PASSWORD=radiochatbox_secret
+      - TZ=Europe/Athens
+      - PGTZ=Europe/Athens
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/migrations:/docker-entrypoint-initdb.d/migrations
+    networks:
+      - radiochatbox
+
+networks:
+  radiochatbox:
+    driver: bridge
+
+volumes:
+  redis_data:
+  postgres_data:
